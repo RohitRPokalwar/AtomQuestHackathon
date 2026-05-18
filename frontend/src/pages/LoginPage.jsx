@@ -58,10 +58,7 @@ export default function LoginPage() {
             <section className="login-hero">
                 <div className="login-hero-bg" />
                 <div className="login-hero-content animate-in">
-                    <div className="hackathon-ribbon">
-                        <span className="hackathon-ribbon-dot" />
-                        AtomQuest Hackathon 1.0
-                    </div>
+
                     <h1>
                         Goal Setting &amp; <span>Tracking Portal</span>
                     </h1>
