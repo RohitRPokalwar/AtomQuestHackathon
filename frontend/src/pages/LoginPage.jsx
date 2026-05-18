@@ -190,9 +190,36 @@ export default function LoginPage() {
                         </div>
 
                         {!isRegister && (
-                            <div className="admin-hint">
-                                <strong>Admin Access</strong>
-                                admin@atomquest.com / admin123
+                            <div style={{ marginTop: 20, padding: 16, background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                                <div style={{ fontWeight: 600, marginBottom: 12, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+                                    Hackathon Demo Quick Login
+                                </div>
+                                <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ flex: 1, padding: '6px 4px', fontSize: 12 }}
+                                        onClick={() => setForm(prev => ({...prev, email: 'admin@atomquest.com', password: 'admin123'}))}
+                                    >
+                                        Admin
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ flex: 1, padding: '6px 4px', fontSize: 12 }}
+                                        onClick={() => setForm(prev => ({...prev, email: 'manager@atomquest.com', password: 'manager123'}))}
+                                    >
+                                        Manager
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ flex: 1, padding: '6px 4px', fontSize: 12 }}
+                                        onClick={() => setForm(prev => ({...prev, email: 'employee@atomquest.com', password: 'employee123'}))}
+                                    >
+                                        Rohit
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>

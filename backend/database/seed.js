@@ -34,6 +34,19 @@ function seed() {
          VALUES (?, ?, ?, ?, ?, ?)`,
         ['admin@atomquest.com', hashPassword('admin123'), 'System Admin', 'admin', 'HR', '#5b8def']);
 
+    run(`INSERT INTO users (email, password_hash, name, role, department, avatar_color)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        ['manager@atomquest.com', hashPassword('manager123'), 'Arjun', 'manager', 'Engineering', '#f59e0b']);
+
+    run(`INSERT INTO users (email, password_hash, name, role, department, avatar_color)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        ['employee@atomquest.com', hashPassword('employee123'), 'Rohit', 'employee', 'Engineering', '#10b981']);
+
+    // Set Arjun as Rohit's manager
+    const mgr = queryOne("SELECT id FROM users WHERE email = 'manager@atomquest.com'");
+    const emp = queryOne("SELECT id FROM users WHERE email = 'employee@atomquest.com'");
+    if (mgr && emp) run('UPDATE users SET manager_id = ? WHERE id = ?', [mgr.id, emp.id]);
+
     console.log('[SEED] Creating cycles...');
 
     // goal setting cycle
