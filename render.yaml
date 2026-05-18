@@ -3,7 +3,7 @@ services:
     name: atomquest-goal-portal
     env: node
     plan: free
-    buildCommand: "npm install && cd backend && npm install && cd ../frontend && npm install && npm run build"
+    buildCommand: "npm install && cd backend && npm install && cd ../frontend && npm install --include=dev && npm run build"
     # Run seed script on every start to ensure SQLite has data (since Free Tier has ephemeral disks)
     startCommand: "npm run seed && npm run start"
     envVars:
