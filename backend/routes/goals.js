@@ -6,6 +6,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { validateGoalSheet } = require('../middleware/validate');
 const { logChange } = require('../services/audit');
 const { computeScore, computeRiskFlag } = require('../services/scoring');
+const { sendEmail, EmailTemplates } = require('../services/email');
 const cache = require('../services/cache');
 
 // get active cycle
@@ -164,6 +165,13 @@ router.post('/sheet/:id/submit', requireAuth, validateGoalSheet, (req, res) => {
         run(`INSERT INTO notifications (user_id, type, title, message, link) VALUES (?, ?, ?, ?, ?)`,
             [user.manager_id, 'submission', 'Goal Sheet Submitted',
              `${user.name} has submitted their goal sheet for review`, `/manager/review/${sheet.id}`]);
+             
+        const manager = queryOne('SELECT name, email FROM users WHERE id = ?', [user.manager_id]);
+        if (manager && manager.email) {
+            const baseUrl = req.protocol + '://' + req.get('host');
+            const tmpl = EmailTemplates.goalSubmitted(user.name, manager.name, baseUrl);
+            sendEmail(manager.email, tmpl.subject, tmpl.html);
+        }
     }
 
     cache.invalidate(/^goals_/);
@@ -249,6 +257,13 @@ router.post('/sheet/:id/approve', requireAuth, requireRole('manager', 'admin'), 
     run(`INSERT INTO notifications (user_id, type, title, message, link) VALUES (?, ?, ?, ?, ?)`,
         [sheet.employee_id, 'approval', 'Goals Approved', 'Your goal sheet has been approved and locked', '/goals']);
 
+    const emp = queryOne('SELECT name, email FROM users WHERE id = ?', [sheet.employee_id]);
+    if (emp && emp.email) {
+        const baseUrl = req.protocol + '://' + req.get('host');
+        const tmpl = EmailTemplates.goalApproved(emp.name, baseUrl);
+        sendEmail(emp.email, tmpl.subject, tmpl.html);
+    }
+
     cache.invalidate(/^goals_/);
     res.json({ message: 'Goal sheet approved and locked' });
 });
@@ -267,6 +282,13 @@ router.post('/sheet/:id/return', requireAuth, requireRole('manager', 'admin'), (
 
     run(`INSERT INTO notifications (user_id, type, title, message, link) VALUES (?, ?, ?, ?, ?)`,
         [sheet.employee_id, 'returned', 'Goals Returned', comment || 'Your goals have been returned for rework', '/goals/create']);
+
+    const emp = queryOne('SELECT name, email FROM users WHERE id = ?', [sheet.employee_id]);
+    if (emp && emp.email) {
+        const baseUrl = req.protocol + '://' + req.get('host');
+        const tmpl = EmailTemplates.goalReturned(emp.name, baseUrl);
+        sendEmail(emp.email, tmpl.subject, tmpl.html);
+    }
 
     cache.invalidate(/^goals_/);
     res.json({ message: 'Sheet returned for rework' });
