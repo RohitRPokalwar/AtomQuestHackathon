@@ -108,7 +108,7 @@ router.get('/completion', requireAuth, requireRole('admin', 'manager'), (req, re
     res.json(data);
 });
 
-// analytics: QoQ trends
+// analytics: QoQ trends, heatmap, manager effectiveness
 router.get('/analytics', requireAuth, requireRole('admin', 'manager'), (req, res) => {
     cache.trackDbQuery();
     const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
@@ -140,7 +140,55 @@ router.get('/analytics', requireAuth, requireRole('admin', 'manager'), (req, res
          GROUP BY t.id ORDER BY count DESC`
     );
 
-    res.json({ trends, deptBreakdown, thrustDist });
+    // dept × quarter heatmap — completion rate per department per quarter
+    cache.trackDbQuery();
+    const departments = queryAll(
+        `SELECT DISTINCT u.department FROM users u WHERE u.role = 'employee' AND u.department IS NOT NULL ORDER BY u.department`
+    );
+    const heatmap = departments.map(d => {
+        const row = { department: d.department };
+        quarters.forEach(q => {
+            const col = `achievement_${q.toLowerCase()}`;
+            const stats = queryOne(
+                `SELECT COUNT(CASE WHEN g.${col} IS NOT NULL THEN 1 END) as reported,
+                        COUNT(*) as total,
+                        AVG(CASE WHEN g.${col} IS NOT NULL THEN g.${col} END) as avg
+                 FROM goals g
+                 JOIN goal_sheets gs ON g.sheet_id = gs.id
+                 JOIN users u ON gs.employee_id = u.id
+                 WHERE gs.locked = 1 AND u.department = ?`, [d.department]
+            );
+            row[q] = {
+                reported: stats?.reported || 0,
+                total: stats?.total || 0,
+                avg: stats?.avg !== null ? Math.round(stats.avg) : null,
+                rate: stats?.total > 0 ? Math.round((stats.reported / stats.total) * 100) : 0
+            };
+        });
+        return row;
+    });
+
+    // manager effectiveness — comparison of check-in completion rates
+    cache.trackDbQuery();
+    const managerEffectiveness = queryAll(
+        `SELECT m.id, m.name as manager_name, m.department,
+                COUNT(DISTINCT emp.id) as team_size,
+                COUNT(DISTINCT CASE WHEN gs.status IN ('locked','approved') THEN gs.id END) as goals_approved,
+                COUNT(DISTINCT CASE WHEN gs.status = 'submitted' THEN gs.id END) as goals_pending,
+                COUNT(DISTINCT CASE WHEN c.checked_in_at IS NOT NULL THEN c.id END) as checkins_done,
+                COUNT(DISTINCT CASE WHEN c.manager_checked_at IS NOT NULL THEN c.id END) as manager_reviews_done
+         FROM users m
+         JOIN users emp ON emp.manager_id = m.id AND emp.role = 'employee'
+         LEFT JOIN goal_sheets gs ON emp.id = gs.employee_id
+         LEFT JOIN goals g ON gs.id = g.sheet_id
+         LEFT JOIN checkins c ON g.id = c.goal_id
+         WHERE m.role = 'manager'
+         GROUP BY m.id
+         ORDER BY goals_approved DESC`
+    );
+
+    res.json({ trends, deptBreakdown, thrustDist, heatmap, managerEffectiveness });
 });
 
 module.exports = router;
+

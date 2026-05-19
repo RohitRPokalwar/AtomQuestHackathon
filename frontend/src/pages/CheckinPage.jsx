@@ -23,6 +23,51 @@ export default function CheckinPage() {
     return <EmployeeCheckinView data={data} />;
 }
 
+function ClosedWindowBanner({ cycle }) {
+    const [nextWindow, setNextWindow] = useState(null);
+
+    useEffect(() => {
+        apiGet('/api/checkins/cycles')
+            .then(cycles => {
+                const now = new Date();
+                const upcoming = cycles
+                    .filter(c => c.phase !== 'goal_setting' && new Date(c.window_open) > now)
+                    .sort((a, b) => new Date(a.window_open) - new Date(b.window_open))[0];
+                setNextWindow(upcoming);
+            })
+            .catch(() => {});
+    }, []);
+
+    const nextDateStr = nextWindow
+        ? new Date(nextWindow.window_open).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+        : null;
+
+    return (
+        <div className="countdown-banner closed mb-24">
+            <div>
+                <div className="countdown-text" style={{ color: 'var(--accent-amber)' }}>
+                    Check-in window is currently closed
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                    {nextWindow
+                        ? `Next window: ${nextWindow.name} opens ${nextDateStr}. Ask Admin to activate it under Admin → Annual Cycle.`
+                        : cycle
+                            ? `${cycle.name} — window: ${new Date(cycle.window_open).toLocaleDateString()} to ${new Date(cycle.window_close).toLocaleDateString()}`
+                            : 'Contact admin to configure check-in cycles'}
+                </div>
+            </div>
+            {nextWindow && (
+                <div style={{ textAlign: 'right', minWidth: 60 }}>
+                    <div className="countdown-days" style={{ fontSize: 22 }}>
+                        {Math.ceil((new Date(nextWindow.window_open) - new Date()) / (1000 * 60 * 60 * 24))}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>days</div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function EmployeeCheckinView({ data }) {
     const { goals, cycle, windowOpen, adminOverride } = data || {};
     const [updates, setUpdates] = useState({});
@@ -73,15 +118,8 @@ function EmployeeCheckinView({ data }) {
                 </div>
             )}
 
-            {!windowOpen && (
-                <div className="countdown-banner closed mb-24">
-                    <div>
-                        <div className="countdown-text" style={{ color: 'var(--accent-amber)' }}>Check-in window is currently closed</div>
-                        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-                            {cycle ? `${cycle.name} opens ${new Date(cycle.window_open).toLocaleDateString()}. Ask HR to activate it under Admin → Annual Cycle.` : 'Contact admin to configure check-in cycles'}
-                        </div>
-                    </div>
-                </div>
+            {!windowOpen && !adminOverride && (
+                <ClosedWindowBanner cycle={cycle} />
             )}
 
             {(!goals || goals.length === 0) ? (
